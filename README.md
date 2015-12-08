@@ -1,3 +1,9 @@
+Features:
+ - Turn On/Off PC in LAN instantly or delayed using Android app
+ - Allow multiple users to control the same PC: user A sets shutdown with delay of 30mins, user B can cancel or modify the scheduled shutdown
+
+This app was developed by my own necesity for turning On/Off a PC used as media server, with a smartphone (Sometimes it's good to be lazy))
+
 Components:
  - PCSwitch - Android app for controling PC on/off operations
  - PCSwitch_Common - Common code used by server and Android app
