@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">PCSwitch</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="edit_message">Enter a message</string>
+    <string name="button_send">Send</string>
+    <string name="title_activity_display_message">DisplayMessageActivity</string>
+    <string name="ping">Ping</string>
+    <string name="sleep">Sleep</string>
+    <string name="wake">Wake</string>
+    <string name="clearlog">Clear Log</string>
+    
+    <string name="notset">Not set</string>
+    <string name="notavailable">N/A</string>
+    <string name="off">off</string>
+    <string name="on">on</string>
+    <string name="shutingdown">shuting down</string>
+    <string name="btnSet">Set</string>
+    <string name="chooseShutdownDelay">Choose shutdown delay</string>
+    <string name="btnWakeUp">Wake</string>
+    <string name="btnCancelShutdown">Cancel</string>
+    
+    <string name="status">Status:</string>
+    <string name="shutdownDelay">Delay:</string>
+    <string name="MAC">MAC:</string>
+    
+    <string name="warn">Warning</string>
+    <string name="warnWifiDisabled">Wifi connection is not available. Please connect to wireless network!</string>
+
+</resources>

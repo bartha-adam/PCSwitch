@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="PCSwitch_Common" default="makejar" basedir=".">
+  <target name ="makejar" description="Create a jar for the PCSwitch_Common project">
+    <jar jarfile="PCSwitch_Common.jar" includes="pcswitch/common/*.class, pcswitch/common/commands/*.class" basedir="bin"/>
+  </target>
+  <target name="copyjar">
+  	<copy file="PCSwitch_Common.jar" todir="../PCSwitch/app/libs/"/>
+  </target>
+</project>
