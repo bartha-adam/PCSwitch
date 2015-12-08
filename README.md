@@ -16,3 +16,12 @@ Build instructions:
   - server needs to be launched with port 12002 (hardcoded in PCSwitch for now), specified as first argument
  - Build PCSwitch Android app
   - Android Studio 1.1 or newer needed
+  - Create unsigned APK:
+    - click on the drop down menu on the toolbar at the top (usually with android icon and name of your application)
+    - select Edit configurations
+    - click plus sign at top left corner or press alt+insert
+    - select Gradle
+    - choose your module as Gradle project
+    - in Tasks: enter assemble
+    - press OK
+    - press play
