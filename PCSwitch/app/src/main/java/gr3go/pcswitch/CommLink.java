@@ -152,6 +152,9 @@ public class CommLink extends Thread {
                 catch(SocketTimeoutException ex) {
                     //Do nothing
                 }
+                catch(SocketException ex){
+                    //Probably terminate() was called, and socket was closed
+                }
             }
         }
         catch (Throwable e) {
@@ -159,9 +162,10 @@ public class CommLink extends Thread {
         }
 	}
 	
-	public void kill() {
+	public void terminate() {
         bKeepRunning = false;
+        if(socket != null) {
+            socket.close();
+        }
     }
-	
-	
 }
