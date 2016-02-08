@@ -63,10 +63,7 @@ public class NetworkingUtils {
 			InetAddress remoteInetAddress = InetAddress.getByAddress(IPv4To_ByteArray(broadcastAddress));
 			return remoteInetAddress;
 	    }
-		catch (UnknownHostException e1) {
-			LOG.error("Failed to send ping to " + NetworkingUtils.Ipv4ToString(broadcastAddress));
-			return null;
-		} catch (IOException e) {
+		catch (Exception ex) {
 			LOG.error("Failed to send ping to " + NetworkingUtils.Ipv4ToString(broadcastAddress));
 			return null;
 		}
