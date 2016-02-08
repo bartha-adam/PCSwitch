@@ -258,8 +258,8 @@ public class MainActivity extends ActionBarActivity
     		if(selectedRemotePC.GetStatus() == PC.Status.OFF) {
     			InetAddress broadcastAddress = networkingUtils.GetBroadcastAddress();
     			if(broadcastAddress != null)
-                    performWakeUp(broadcastAddress, selectedRemotePC.GetMACAddress());
-    				//WakeUp(selectedRemotePC.GetAddress(), selectedRemotePC.GetMACAddress());
+                    new WOLSender().execute(new WOLSenderParams(broadcastAddress,
+                            selectedRemotePC.GetMACAddress()));
     		} else {
                 LOG.warn("Wakeup skipped, pc status is not OFF! " + selectedRemotePC.toString());
             }
@@ -279,89 +279,6 @@ public class MainActivity extends ActionBarActivity
     	return hostAddress.isReachable(timeout);
     }
     
-    public void sendPacketToServer(InetAddress serverAddress, int serverPort, byte[] bytes) {
-		try {
-			DatagramSocket s = new DatagramSocket();
-			DatagramPacket p = new DatagramPacket(bytes, bytes.length, serverAddress, serverPort);
-			s.send(p);
-		}
-		catch (SocketException e) {
-			addLogLine("Failed to send packet! Ex=" + e.getMessage());
-		}
-		catch (IOException e) {
-			addLogLine("Failed to send packet! Ex=" + e.getMessage());
-		}
-    }
-
-    //TODO: find better name for this method
-    private void performWakeUp(InetAddress address, String macStr)
-    {
-        //
-        // WOL packet is sent over UDP 255.255.255.0:40000.
-        //
-    	//addLogLine("Waking Up.......");
-
-        try
-        {
-            byte[] macBytes = getMacBytes(macStr);
-            byte[] bytes = new byte[6 + 16 * macBytes.length];
-            for (int i = 0; i < 6; i++) {
-                bytes[i] = (byte) 0xff;
-            }
-            for (int i = 6; i < bytes.length; i += macBytes.length) {
-                System.arraycopy(macBytes, 0, bytes, i, macBytes.length);
-            }
-
-            DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, 9);
-            DatagramSocket socket = new DatagramSocket();
-            socket.send(packet);
-            socket.close();
-            LOG.info("Wake-Up " + address.getHostName() + " " + macStr);
-        }
-        catch (Exception e) {
-        	LOG.error("Failed to send Wake-on-LAN packet: + e");
-        }
-    }
-
-    //TODO: find better name for this method
-    private void performWakeUp(InetAddress address, MACAddress mac)
-    {
-        //
-        // WOL packet is sent over UDP 255.255.255.0:40000.
-        //
-    	//addLogLine("Waking Up.......");
-
-        try
-        {
-            byte[] macBytes = mac.bytes;
-            
-            byte[] bytes = new byte[6 + 16 * macBytes.length];
-            for (int i = 0; i < 6; i++) {
-                bytes[i] = (byte) 0xff;
-            }
-            for (int i = 6; i < bytes.length; i += macBytes.length) {
-                System.arraycopy(macBytes, 0, bytes, i, macBytes.length);
-            }
-
-            DatagramPacket packet_port7 = new DatagramPacket(bytes, bytes.length, address, 7);
-            DatagramPacket packet_port9 = new DatagramPacket(bytes, bytes.length, address, 9);
-            DatagramPacket packet_port40000 = new DatagramPacket(bytes, bytes.length, address, 40000);
-            DatagramSocket socket = new DatagramSocket();
-            //Send an all three ports: 7,9,40000
-            //Send packets multiple times
-            for(int i = 0; i< 10 ; ++i){
-	            socket.send(packet_port7);
-	            socket.send(packet_port9);
-	            socket.send(packet_port40000);
-            }
-            socket.close();
-            LOG.info("Wake-Up " + address.getHostName() + " " + mac.toString());
-        }
-        catch (Exception e) {
-        	LOG.error("Failed to send Wake-on-LAN packet: + e");
-        }
-    }
-
     //TODO: move to some utililty class
     private static byte[] getMacBytes(String macStr) throws IllegalArgumentException {
         byte[] bytes = new byte[6];
