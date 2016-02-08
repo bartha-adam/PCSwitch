@@ -17,6 +17,7 @@
     </LinearLayout>
 
     <RelativeLayout
+        android:id="@+id/topLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="50dp" >
@@ -42,6 +43,7 @@
     </RelativeLayout>
 
    <RelativeLayout
+        android:id="@+id/middleLayout"
         android:layout_width="match_parent"
         android:layout_height="fill_parent"
         android:layout_weight="0.49"
@@ -126,7 +128,20 @@
             android:layout_alignParentTop="true"
             android:layout_marginTop="24dp"
             android:text="@string/status" />
-
    </RelativeLayout>
 
+    <RelativeLayout
+        android:id="@+id/noWifiLayout"
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:paddingLeft="30dp"
+        android:paddingTop="30dp" >
+        <TextView
+            android:id="@+id/txtStatus2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="24dp"
+            android:text="@string/warnWifiDisabled" />
+    </RelativeLayout>
 </LinearLayout>

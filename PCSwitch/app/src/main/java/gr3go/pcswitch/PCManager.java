@@ -29,11 +29,12 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 	int			monitoringPeriod = 60000; //1min
 	Date		lastMonitoringSent = null;
 	
-	Vector<PC>	remotePCs;
-	 PC			selectedPC = null;
-	PCManagerListener listener;
+    Vector<PC>	remotePCs;
+    PC			selectedPC = null;
+    PCManagerListener listener;
 	Context context = null;
 	PCManagerDataSource dataSource;
+    private volatile boolean running = true;
 	
 	public PCManager(NetworkingUtils networkingUtils, PCManagerListener listener,
                      Context context) throws SocketException {
@@ -46,18 +47,13 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
             dataSource = new PCManagerDataSource(context);
             dataSource.open();
             remotePCs = dataSource.GetPCs();
-            Iterator<PC> it = remotePCs.iterator();
-		    while(it.hasNext()) {
-		    	PC entry = (PC)it.next();
-		    	NotifyPCAdded(entry, false);
-		    }
 		} catch (SocketException e) {
             LOG.info("Constructor exception:" + e.toString());
 			e.printStackTrace();
             throw e;
 		}
 	}
-		
+
 	public void SetSelectedPC(PC pc) {
 		if(selectedPC != null){
 			synchronized(selectedPC) {
@@ -286,9 +282,13 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 		NotifyPCChanged(remotePC);
 	}
 
-	@Override
+    public void terminate() {
+        running = false;
+    }
+
+    @Override
 	public void run() {
-		while(true) {
+		while(running) {
 			try {
 				Date now = new Date();
 				if(lastMonitoringSent == null || (now.getTime() - lastMonitoringSent.getTime()) > monitoringPeriod) {
@@ -324,6 +324,16 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 				LOG.info("PCManager Periodic failed:" + e.toString());
 			}
 		}
+        if(commLink != null) {
+            try {
+                commLink.terminate();
+                commLink.join();
+            }
+            catch (InterruptedException ex)
+            {
+                LOG.info("Failed to stop commLink");
+            }
+        }
 		
 	}
 	protected void NotifyPCAdded(PC pc, boolean notifyDb)
