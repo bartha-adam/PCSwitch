@@ -429,12 +429,8 @@ public class MainActivity extends ActionBarActivity
         Spinner pcSpinner = (Spinner) findViewById(R.id.spnPCSelector);
         if (pcSpinner != null) {
             pcSpinner.setOnItemSelectedListener(this);
-            Vector<PC> remotePCs = pcManager.GetRemotePCs();
-            Iterator<PC> it = remotePCs.iterator();
-            while (it.hasNext()) {
-                PC remotePC = (PC) it.next();
-                PCAdded(remotePC);
-            }
+            //Trigger update from PCManager
+            PCAdded(null);
         } else {
             LOG.warn("InitializeUI spinner is NULL!");
         }
