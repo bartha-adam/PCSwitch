@@ -22,12 +22,11 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 	CommLink	commLink;
 	int 		remotePort= 12002;
 	int 		localPort = 12001;
-	
-	int 		serverPublishStatusPeriod = 10000; //10sec
-	Date		lastDiscoverySent = null;
-	
-	int			monitoringPeriod = 60000; //1min
-	Date		lastMonitoringSent = null;
+
+    Date		lastDiscoverySent = null;
+    Date		lastMonitoringSent = null;
+    static final int monitoringPeriod = 60000; //1min
+    static final int serverPublishStatusPeriod = 10000; //10sec
 	
     Vector<PC>	remotePCs;
     PC			selectedPC = null;
@@ -58,6 +57,7 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 		if(selectedPC != null){
 			synchronized(selectedPC) {
 				selectedPC = pc;
+                lastMonitoringSent = null;
 			}
 		} else {
             selectedPC = pc;
