@@ -1,12 +1,6 @@
 package gr3go.pcswitch;
-
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
@@ -14,17 +8,12 @@ import java.util.Vector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import android.content.BroadcastReceiver;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Context;
-
-import pcswitch.common.MACAddress;
 
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.app.TimePickerDialog.OnTimeSetListener;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -77,19 +66,31 @@ public class MainActivity extends ActionBarActivity
                     .add(R.id.container, new PlaceholderFragment())
                     .commit();
         }
-        
-        
-        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        networkingUtils = new NetworkingUtils(connManager, wifi, this);
+
+        Initialize();
+
+        isWifiConnectionAvailable = networkingUtils.IsWifiConnected();
+        if (isWifiConnectionAvailable) {
+            StartFunctionality();
+        }
     }
-    
+
     @Override
-    protected void onSaveInstanceState (Bundle outState)
-    {
-        
+    public void onDestroy(){
+        super.onDestroy();
+        unregisterReceiver(networkingUtils);
+        StopFunctionality();
     }
-    
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        InitializeUI();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -120,12 +121,12 @@ public class MainActivity extends ActionBarActivity
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                Bundle savedInstanceState) {
+                                 Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
             return rootView;
         }
     }
-    
+
     public void btnDiscoverServersClicked(View view) {
         pcManager.SendGetServerStatus_Broadcast();
     }
@@ -134,10 +135,8 @@ public class MainActivity extends ActionBarActivity
     public void onClick(DialogInterface dialog, int item) {
         //TODO: rename this method
         dialog.dismiss();
-        if(dialog == shutdownOptionDialog)
-        {
-            switch(item)
-            {
+        if (dialog == shutdownOptionDialog) {
+            switch (item) {
                 case 0: //Now
                     pcManager.SetShutdownDelayFor(selectedRemotePC, 0);
                     break;
@@ -150,8 +149,8 @@ public class MainActivity extends ActionBarActivity
 
     OnTimeSetListener shutdownTimeSelectCallback = new OnTimeSetListener() {
         @Override
-        public void onTimeSet(TimePicker view, int hourOfDay, int minute){
-            if(view.isShown()){
+        public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+            if (view.isShown()) {
                 // This method will return true only once
                 String logLine = "Selected time:";
                 logLine += hourOfDay;
@@ -166,21 +165,20 @@ public class MainActivity extends ActionBarActivity
         }
     };
 
-    public void showTimePicker()
-    {
+    public void showTimePicker() {
         int defaultMin = 30;
         int defaultHour = 0;
-        if(selectedRemotePC != null && selectedRemotePC.IsShutdownConfigured()){
+        if (selectedRemotePC != null && selectedRemotePC.IsShutdownConfigured()) {
             int configuredShutdownInSec = selectedRemotePC.GetShutdownDelay();
             int secondsInMin = 60;
             int secondsInHour = 60 * secondsInMin;
             int secondsInDay = 24 * secondsInHour;
-            if(configuredShutdownInSec >= secondsInDay){
+            if (configuredShutdownInSec >= secondsInDay) {
                 defaultHour = 23;
                 defaultMin = 59;
             } else {
-                defaultHour = configuredShutdownInSec/secondsInHour;
-                defaultMin = (configuredShutdownInSec % secondsInHour)/secondsInMin;
+                defaultHour = configuredShutdownInSec / secondsInHour;
+                defaultMin = (configuredShutdownInSec % secondsInHour) / secondsInMin;
             }
         }
         TimePickerDialog timePicker = new TimePickerDialog(this, shutdownTimeSelectCallback,
@@ -188,25 +186,25 @@ public class MainActivity extends ActionBarActivity
         timePicker.setTitle(getResources().getString(R.string.chooseShutdownDelay));
         timePicker.show();
     }
-    
-    public void txtShutDownInValueClicked(View view){
-        final CharSequence[] items = {" Now "," Delayed "};
+
+    public void txtShutDownInValueClicked(View view) {
+        final CharSequence[] items = {" Now ", " Delayed "};
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Shutdown");
         builder.setSingleChoiceItems(items, 0, this);
         shutdownOptionDialog = builder.create();
         shutdownOptionDialog.show();
     }
- 
-    public void btnCancelShutdownClicked(View view){
+
+    public void btnCancelShutdownClicked(View view) {
         pcManager.SetShutdownDelayFor(selectedRemotePC, -1); //Cancel
     }
-    
-    public void btnWakeUpClicked(View view){
-        if(selectedRemotePC != null) {
-            if(selectedRemotePC.GetStatus() == PC.Status.OFF) {
+
+    public void btnWakeUpClicked(View view) {
+        if (selectedRemotePC != null) {
+            if (selectedRemotePC.GetStatus() == PC.Status.OFF) {
                 InetAddress broadcastAddress = networkingUtils.GetBroadcastAddress();
-                if(broadcastAddress != null)
+                if (broadcastAddress != null)
                     new WOLSender().execute(new WOLSenderParams(broadcastAddress,
                             selectedRemotePC.GetMACAddress()));
             } else {
@@ -224,7 +222,7 @@ public class MainActivity extends ActionBarActivity
 
     @Override
     public void PCChanged(PC pc) {
-        if(pc == selectedRemotePC) {
+        if (pc == selectedRemotePC) {
             MainActivity.this.runOnUiThread(new RunnableWithPCParam(pc) {
                 public void run() {
                     UpdateUIFromModel(pc);
@@ -239,20 +237,20 @@ public class MainActivity extends ActionBarActivity
         MainActivity.this.runOnUiThread(new RunnableWithPCParam(pc) {
             public void run() {
                 Spinner spinner = (Spinner) findViewById(R.id.spnPCSelector);
-                if(spinner == null){
+                if (spinner == null) {
                     LOG.error("PCAdded spinner is null!");
                     return;
                 }
-                    
+
                 List<String> list = new ArrayList<String>();
                 Vector<PC> remotePCs = main.pcManager.GetRemotePCs();
                 Iterator<PC> it = remotePCs.iterator();
-                while(it.hasNext()){
-                    PC entry = (PC)it.next();
+                while (it.hasNext()) {
+                    PC entry = (PC) it.next();
                     list.add(entry.GetAddress().getHostAddress());
                 }
                 ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
-                    android.R.layout.simple_spinner_item, list);
+                        android.R.layout.simple_spinner_item, list);
                 dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinner.setAdapter(dataAdapter);
             }
@@ -274,7 +272,7 @@ public class MainActivity extends ActionBarActivity
     }
 
     public void setTextViewClickable(TextView textView, Boolean flag) {
-        if(flag) {
+        if (flag) {
             textView.setPaintFlags(textView.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
         } else {
             textView.setPaintFlags(textView.getPaintFlags() & ~Paint.UNDERLINE_TEXT_FLAG);
@@ -287,54 +285,53 @@ public class MainActivity extends ActionBarActivity
         View view;
 
         TextView txtStatusValue = null;
-        if((view = findViewById(R.id.txtStatusValue)) != null) {
+        if ((view = findViewById(R.id.txtStatusValue)) != null) {
             txtStatusValue = (TextView) view;
         }
-        
+
         TextView txtShutdownDelayValue = null;
-        if((view = findViewById(R.id.txtShutDownInValue)) != null) {
+        if ((view = findViewById(R.id.txtShutDownInValue)) != null) {
             txtShutdownDelayValue = (TextView) view;
         }
-        
+
         TextView txtMACValue = null;
-        if((view = findViewById(R.id.txtMACValue)) != null) {
+        if ((view = findViewById(R.id.txtMACValue)) != null) {
             txtMACValue = (TextView) view;
         }
-        
+
         Button btnWakeUp = null;
-        if((view = findViewById(R.id.btnWakeUp)) != null) {
+        if ((view = findViewById(R.id.btnWakeUp)) != null) {
             btnWakeUp = (Button) view;
         }
-        
+
         Button btnCancelShutdown = null;
-        if((view = findViewById(R.id.btnCancelShutdown)) != null) {
+        if ((view = findViewById(R.id.btnCancelShutdown)) != null) {
             btnCancelShutdown = (Button) view;
         }
-        
-        if(remotePC != null) {
-            if(txtMACValue != null) {
-                if(remotePC.GetMACAddress() != null) {
+
+        if (remotePC != null) {
+            if (txtMACValue != null) {
+                if (remotePC.GetMACAddress() != null) {
                     txtMACValue.setText(remotePC.GetMACAddress().toString());
-                }
-                else {
+                } else {
                     txtMACValue.setText(getResources().getString(R.string.notavailable));
                 }
             }
-            
-            if(remotePC.GetStatus() == PC.Status.ON) {
-                if(txtStatusValue != null) {
+
+            if (remotePC.GetStatus() == PC.Status.ON) {
+                if (txtStatusValue != null) {
                     txtStatusValue.setText(getResources().getString(R.string.on));
                     txtStatusValue.setTextColor(Color.GREEN);
                 }
-                if(btnWakeUp != null) {
+                if (btnWakeUp != null) {
                     btnWakeUp.setVisibility(View.GONE);
                 }
-                if(txtShutdownDelayValue != null) {
+                if (txtShutdownDelayValue != null) {
                     setTextViewClickable(txtShutdownDelayValue, true);
                 }
-                
-                if(remotePC.IsShutdownConfigured()) {
-                    if(btnCancelShutdown != null) {
+
+                if (remotePC.IsShutdownConfigured()) {
+                    if (btnCancelShutdown != null) {
                         btnCancelShutdown.setVisibility(View.VISIBLE);
                     }
                     int shutdownDelay = remotePC.GetShutdownDelay();
@@ -344,21 +341,21 @@ public class MainActivity extends ActionBarActivity
                     int secondsInHour = 60 * secondsInMinute;
                     int secondsInDay = 24 * secondsInHour;
 
-                    if(shutdownDelay >= secondsInDay) {
+                    if (shutdownDelay >= secondsInDay) {
                         // Days
                         int numDays = shutdownDelay / secondsInDay;
                         shutdownDelayStr += numDays + "d ";
                         shutdownDelay = shutdownDelay % secondsInDay;
                     }
 
-                    if(shutdownDelay >= secondsInHour) {
+                    if (shutdownDelay >= secondsInHour) {
                         // Hours
                         int numHours = shutdownDelay / secondsInHour;
                         shutdownDelayStr += numHours + "h ";
                         shutdownDelay = shutdownDelay % secondsInHour;
                     }
 
-                    if(shutdownDelay > secondsInMinute) {
+                    if (shutdownDelay > secondsInMinute) {
                         // Minutes
                         int numMinutes = shutdownDelay / secondsInMinute;
                         shutdownDelayStr += numMinutes + "m ";
@@ -366,195 +363,171 @@ public class MainActivity extends ActionBarActivity
                     }
 
                     // Seconds shown only when delay is < 1min
-                    if(shutdownDelayStr.length() == 0) {
+                    if (shutdownDelayStr.length() == 0) {
                         shutdownDelayStr += shutdownDelay + "s";
                     }
-                    if(txtShutdownDelayValue != null) {
+                    if (txtShutdownDelayValue != null) {
                         txtShutdownDelayValue.setText(shutdownDelayStr);
                     }
-                }
-                else{
-                    if(btnCancelShutdown != null)
+                } else {
+                    if (btnCancelShutdown != null)
                         btnCancelShutdown.setVisibility(View.GONE);
-                    if(txtShutdownDelayValue != null)
+                    if (txtShutdownDelayValue != null)
                         txtShutdownDelayValue.setText(getResources().getString(R.string.notset));
                 }
-            }
-            else if(remotePC.GetStatus() == PC.Status.OFF){
-                if(txtStatusValue != null) {
+            } else if (remotePC.GetStatus() == PC.Status.OFF) {
+                if (txtStatusValue != null) {
                     txtStatusValue.setText(getResources().getString(R.string.off));
                     txtStatusValue.setTextColor(Color.RED);
                 }
-                if(txtShutdownDelayValue != null) {
+                if (txtShutdownDelayValue != null) {
                     txtShutdownDelayValue.setText(getResources().getString(R.string.notavailable));
                 }
-                if(btnWakeUp != null) {
+                if (btnWakeUp != null) {
                     btnWakeUp.setVisibility(View.VISIBLE);
                 }
-                if(txtShutdownDelayValue != null) {
+                if (txtShutdownDelayValue != null) {
                     setTextViewClickable(txtShutdownDelayValue, false);
                 }
-                if(btnCancelShutdown != null) {
+                if (btnCancelShutdown != null) {
                     btnCancelShutdown.setVisibility(View.GONE);
                 }
-                
-            }
-            else if(remotePC.GetStatus() == PC.Status.ShuttingDown){
-                if(txtStatusValue != null){
+
+            } else if (remotePC.GetStatus() == PC.Status.ShuttingDown) {
+                if (txtStatusValue != null) {
                     txtStatusValue.setText(getResources().getString(R.string.shutingdown));
                     txtStatusValue.setTextColor(Color.parseColor("#ffa500"));
                 }
-                if(txtShutdownDelayValue != null) {
+                if (txtShutdownDelayValue != null) {
                     txtShutdownDelayValue.setText(getResources().getString(R.string.notavailable));
                 }
-                if(btnWakeUp != null) {
+                if (btnWakeUp != null) {
                     btnWakeUp.setVisibility(View.GONE);
                 }
-                if(txtShutdownDelayValue != null) {
+                if (txtShutdownDelayValue != null) {
                     setTextViewClickable(txtShutdownDelayValue, false);
                 }
-                if(btnCancelShutdown != null) {
+                if (btnCancelShutdown != null) {
                     btnCancelShutdown.setVisibility(View.GONE);
                 }
             }
-        }
-        else {
+        } else {
             // Default case, probably should not get here
-            if(txtStatusValue != null){
+            if (txtStatusValue != null) {
                 txtStatusValue.setText(getResources().getString(R.string.notavailable));
                 txtStatusValue.setTextColor(Color.BLACK);
             }
-            if(txtShutdownDelayValue != null){
+            if (txtShutdownDelayValue != null) {
                 txtShutdownDelayValue.setText(getResources().getString(R.string.notavailable));
                 setTextViewClickable(txtShutdownDelayValue, false);
             }
-        }        
+        }
+    }
+
+    private void InitializeUI() {
+        // Update PC values
+        Spinner pcSpinner = (Spinner) findViewById(R.id.spnPCSelector);
+        if (pcSpinner != null) {
+            pcSpinner.setOnItemSelectedListener(this);
+            Vector<PC> remotePCs = pcManager.GetRemotePCs();
+            Iterator<PC> it = remotePCs.iterator();
+            while (it.hasNext()) {
+                PC remotePC = (PC) it.next();
+                PCAdded(remotePC);
+            }
+        } else {
+            LOG.warn("InitializeUI spinner is NULL!");
+        }
+        UpdateLayouts();
     }
 
     public void UpdateLayouts() {
         View view = null;
         RelativeLayout topLayout = null;
-        if((view = findViewById(R.id.topLayout)) != null) {
+        if ((view = findViewById(R.id.topLayout)) != null) {
             topLayout = (RelativeLayout) view;
         }
 
-        if(topLayout != null)
-        {
-            if(isWifiConnectionAvailable)
+        if (topLayout != null) {
+            if (isWifiConnectionAvailable)
                 topLayout.setVisibility(View.VISIBLE);
             else
                 topLayout.setVisibility(View.GONE);
         }
 
         RelativeLayout middleLayout = null;
-        if((view = findViewById(R.id.middleLayout)) != null) {
+        if ((view = findViewById(R.id.middleLayout)) != null) {
             middleLayout = (RelativeLayout) view;
         }
 
-        if(middleLayout != null)
-        {
-            if(isWifiConnectionAvailable)
+        if (middleLayout != null) {
+            if (isWifiConnectionAvailable)
                 middleLayout.setVisibility(View.VISIBLE);
             else
                 middleLayout.setVisibility(View.GONE);
         }
 
         RelativeLayout noWifiLayout = null;
-        if((view = findViewById(R.id.noWifiLayout)) != null) {
+        if ((view = findViewById(R.id.noWifiLayout)) != null) {
             noWifiLayout = (RelativeLayout) view;
         }
 
-        if(noWifiLayout != null)
-        {
-            if(isWifiConnectionAvailable)
+        if (noWifiLayout != null) {
+            if (isWifiConnectionAvailable)
                 noWifiLayout.setVisibility(View.GONE);
             else
                 noWifiLayout.setVisibility(View.VISIBLE);
         }
     }
 
+    private void Initialize() {
+        if (networkingUtils == null) {
+            ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+            networkingUtils = new NetworkingUtils(connManager, wifi, this);
+        }
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
+        registerReceiver(networkingUtils, intentFilter);
+    }
+
     private void StartFunctionality() {
         try {
-            pcManager = new PCManager(networkingUtils, this, getApplicationContext());
-            pcManagerThread = new Thread(pcManager);
-            pcManagerThread.start();
-        }
-        catch (Exception e) {
+            if (pcManager == null) {
+                pcManager = new PCManager(networkingUtils, this, getApplicationContext());
+                pcManagerThread = new Thread(pcManager);
+                pcManagerThread.start();
+            }
+        } catch (Exception e) {
             LOG.error("Failed to start application! PCManager construction failed. Ex=" + e.toString());
             LOG.error("Closing!");
             finish();
         }
-
-        // Update PC values
-        // TODO: probably this code has to be moved from here
-        Spinner pcSpinner = (Spinner) findViewById(R.id.spnPCSelector);
-        if(pcSpinner != null){
-            pcSpinner.setOnItemSelectedListener(this);
-            Vector<PC> remotePCs = pcManager.GetRemotePCs();
-            Iterator<PC> it = remotePCs.iterator();
-            while(it.hasNext()) {
-                PC remotePC = (PC)it.next();
-                PCAdded(remotePC);
-            }
-        }
-        else {
-            LOG.warn("onAttachedToWindow spinner is NULL!");
-        }
     }
 
     private void StopFunctionality() {
-        if(pcManager != null)
+        if (pcManager != null)
             pcManager.terminate();
         try {
-            if(pcManagerThread != null)
+            if (pcManagerThread != null)
                 pcManagerThread.join();
-        }
-        catch (InterruptedException ex)
-        {
+        } catch (InterruptedException ex) {
             LOG.info("Failed to stop pc manager thread");
         }
+        networkingUtils = null;
     }
 
-    public void OnWifiConnected(){
+    public void OnWifiConnected() {
         LOG.debug("Connected to Wifi");
         isWifiConnectionAvailable = true;
         UpdateLayouts();
         StartFunctionality();
     }
 
-    public void OnWifiDisconnected(){
+    public void OnWifiDisconnected() {
         LOG.debug("Disconnected from Wifi");
         isWifiConnectionAvailable = false;
         UpdateLayouts();
         StopFunctionality();
-    }
-
-    @Override
-    public void onPause()
-    {
-        super.onPause();
-        unregisterReceiver(networkingUtils);
-        StopFunctionality();
-    }
-    @Override
-    public void onResume()
-    {
-        super.onResume();
-
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
-        registerReceiver(networkingUtils, intentFilter);
-
-        isWifiConnectionAvailable = networkingUtils.IsWifiConnected();
-        if(isWifiConnectionAvailable)
-            StartFunctionality();
-
-        UpdateLayouts();
-    }
-
-    @Override
-    public void onStop()
-    {
-        super.onStop();
     }
 }
