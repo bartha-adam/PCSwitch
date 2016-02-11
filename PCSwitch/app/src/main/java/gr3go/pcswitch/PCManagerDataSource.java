@@ -81,10 +81,11 @@ public class PCManagerDataSource {
 	 private PC cursorToPC(Cursor cursor) {
 		 try {
 			InetAddress address = InetAddress.getByName(cursor.getString(1));
-			PC pc = new PC(address);
-			String macStr = cursor.getString(2);
-			MACAddress mac = new MACAddress(macStr);
-			pc.SetMACAddress(mac);
+            String macStr = cursor.getString(2);
+            MACAddress mac = new MACAddress(macStr);
+
+            PC pc = new PC(mac);
+			pc.SetAddress(address);
 			pc.SetDBId(cursor.getLong(0));
 			return pc;
 		 } catch (UnknownHostException e) {

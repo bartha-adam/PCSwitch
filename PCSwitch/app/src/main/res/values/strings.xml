@@ -24,8 +24,10 @@
     <string name="status">Status:</string>
     <string name="shutdownDelay">Delay:</string>
     <string name="MAC">MAC:</string>
+    <string name="IP">IP:</string>
     
     <string name="warn">Warning</string>
-    <string name="warnWifiDisabled">Wifi connection is not available. Please connect to wireless network!</string>
+    <string name="warnWifiDisabled">Wifi connection is not available.\nPlease connect to wireless network!</string>
+    <string name="emptyModel">No server detected.\nMake sure PCSwitch server is running on your PC.</string>
 
 </resources>
