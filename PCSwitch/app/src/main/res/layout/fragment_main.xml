@@ -20,7 +20,8 @@
         android:id="@+id/topLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="50dp" >
+        android:layout_marginTop="50dp"
+        android:visibility="gone">
 
         <Spinner
             android:id="@+id/spnPCSelector"
@@ -47,9 +48,9 @@
         android:layout_width="match_parent"
         android:layout_height="fill_parent"
         android:layout_weight="0.49"
-        android:paddingLeft="30dp"
-        android:paddingTop="30dp" >
-
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="30dp"
+        android:visibility="gone">
         <TextView
             android:id="@+id/txtShutDonwIn"
             android:layout_width="wrap_content"
@@ -57,7 +58,7 @@
             android:layout_alignParentLeft="true"
 
             android:layout_below="@+id/txtStatus"
-            android:paddingTop="30dp"
+            android:layout_marginTop="30dp"
             android:text="@string/shutdownDelay" />
 
         <TextView
@@ -97,6 +98,23 @@
             android:layout_alignLeft="@+id/txtShutDownInValue"
             android:text="Dummy3" />
 
+       <TextView
+           android:id="@+id/txtIP"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:layout_alignLeft="@+id/txtShutDonwIn"
+           android:layout_below="@+id/txtMACValue"
+           android:layout_marginTop="30dp"
+           android:text="@string/IP" />
+
+       <TextView
+           android:id="@+id/txtIPValue"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:layout_alignBottom="@+id/txtIP"
+           android:layout_alignLeft="@+id/txtShutDownInValue"
+           android:text="Dummy4" />
+
         <Button
             android:id="@+id/btnCancelShutdown"
             style="?android:attr/buttonStyleSmall"
@@ -134,14 +152,49 @@
         android:id="@+id/noWifiLayout"
         android:layout_width="match_parent"
         android:layout_height="fill_parent"
-        android:paddingLeft="30dp"
-        android:paddingTop="30dp" >
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp" >
         <TextView
-            android:id="@+id/txtStatus2"
+            android:textStyle="bold"
+            android:textSize="20dp"
+            android:id="@+id/txtWarnWifiDisabled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_marginTop="24dp"
+            android:singleLine="false"
+            android:inputType="textMultiLine"
+            android:layout_centerInParent="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:gravity="center"
             android:text="@string/warnWifiDisabled" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/emptyModelLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="30dp">
+        <TextView
+            android:id="@+id/txtEmptyModel"
+            android:textStyle="bold"
+            android:textSize="20dp"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="false"
+            android:inputType="textMultiLine"
+            android:layout_centerInParent="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginRight="30dp"
+            android:gravity="center"
+            android:text="@string/emptyModel" />
+        <ImageButton
+            android:id="@+id/btnDiscoverEmptyModel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:background="@mipmap/ic_refresh"
+            android:onClick="btnDiscoverServersClicked" />
     </RelativeLayout>
 </LinearLayout>

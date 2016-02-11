@@ -1,4 +1,5 @@
 package gr3go.pcswitch;
+
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -20,6 +21,7 @@ import android.graphics.Paint;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Looper;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
@@ -36,24 +38,31 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
-import gr3go.pcswitch.R;
+import pcswitch.common.MACAddress;
 
 
 public class MainActivity extends ActionBarActivity
-                          implements MyLogger,
-                                     PCManagerListener,
-                                     OnItemSelectedListener,
-                                     DialogInterface.OnClickListener,
-                                     NetworkingUtils.WifiStateObserver {
+        implements MyLogger,
+        PCManagerListener,
+        OnItemSelectedListener,
+        DialogInterface.OnClickListener,
+        NetworkingUtils.WifiStateObserver {
     Logger LOG = LoggerFactory.getLogger(MainActivity.class);
 
     private NetworkingUtils networkingUtils;
-    private CommLink        commLink;
-    private PCManager       pcManager;
-    private Thread          pcManagerThread;
-    PC                      selectedRemotePC;
-    AlertDialog             shutdownOptionDialog;
-    private boolean         isWifiConnectionAvailable;
+    private CommLink commLink;
+    private PCManager pcManager;
+    private Thread pcManagerThread;
+    PC selectedRemotePC;
+    AlertDialog shutdownOptionDialog;
+    private boolean isWifiConnectionAvailable;
+
+    private enum Layouts {
+        Layout_Loading,
+        Layout_NoWifi,
+        Layout_Normal,
+        Layout_EmptyModel
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,24 +77,29 @@ public class MainActivity extends ActionBarActivity
         }
 
         Initialize();
-
-        isWifiConnectionAvailable = networkingUtils.IsWifiConnected();
-        if (isWifiConnectionAvailable) {
-            StartFunctionality();
-        }
     }
 
     @Override
-    public void onDestroy(){
+    public void onDestroy() {
         super.onDestroy();
         unregisterReceiver(networkingUtils);
         StopFunctionality();
     }
 
     @Override
-    public void onStart(){
+    public void onStart() {
+        //UI controls are created
         super.onStart();
-        InitializeUI();
+
+        UpdateLayouts(Layouts.Layout_Loading);
+
+        Spinner pcSpinner = (Spinner) findViewById(R.id.spnPCSelector);
+        pcSpinner.setOnItemSelectedListener(this);
+
+        isWifiConnectionAvailable = networkingUtils.IsWifiConnected();
+        if (isWifiConnectionAvailable) {
+            OnWifiConnected();
+        }
     }
 
     @Override
@@ -222,19 +236,24 @@ public class MainActivity extends ActionBarActivity
 
     @Override
     public void PCChanged(PC pc) {
+        RunnableWithPCParam changeAction = new RunnableWithPCParam(pc) {
+            public void run() {
+                UpdateUIFromModel(pc);
+            }
+        };
         if (pc == selectedRemotePC) {
-            MainActivity.this.runOnUiThread(new RunnableWithPCParam(pc) {
-                public void run() {
-                    UpdateUIFromModel(pc);
-                }
-            });
+            if (IsUIThread()){
+                changeAction.run();
+            } else {
+                MainActivity.this.runOnUiThread(changeAction);
+            }
         }
     }
 
     @Override
     public void PCAdded(PC pc) {
         final MainActivity main = this;
-        MainActivity.this.runOnUiThread(new RunnableWithPCParam(pc) {
+        RunnableWithPCParam addAction = new RunnableWithPCParam(pc) {
             public void run() {
                 Spinner spinner = (Spinner) findViewById(R.id.spnPCSelector);
                 if (spinner == null) {
@@ -242,26 +261,42 @@ public class MainActivity extends ActionBarActivity
                     return;
                 }
 
+                if (pcManager == null) {
+                    LOG.error("PCAdded pcManager is null!");
+                    return;
+                }
+
                 List<String> list = new ArrayList<String>();
-                Vector<PC> remotePCs = main.pcManager.GetRemotePCs();
+                Vector<PC> remotePCs = pcManager.GetRemotePCs();
                 Iterator<PC> it = remotePCs.iterator();
                 while (it.hasNext()) {
                     PC entry = (PC) it.next();
-                    list.add(entry.GetAddress().getHostAddress());
+                    //list.add(entry.GetAddress().getHostAddress());
+                    list.add(entry.GetMACAddress().toString());
                 }
                 ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
                         android.R.layout.simple_spinner_item, list);
                 dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinner.setAdapter(dataAdapter);
+
+                if (remotePCs.isEmpty())
+                    UpdateLayouts(Layouts.Layout_EmptyModel);
+                else
+                    UpdateLayouts(Layouts.Layout_Normal);
             }
-        });
+        };
+        if (IsUIThread()) {
+            addAction.run();
+        } else {
+            MainActivity.this.runOnUiThread(addAction);
+        }
     }
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View arg1, int pos, long id) {
-        String ip = parent.getItemAtPosition(pos).toString();
-        LOG.debug("Selection changed to " + ip);
-        selectedRemotePC = pcManager.FindPC(ip);
+        String mac = parent.getItemAtPosition(pos).toString();
+        LOG.debug("Selection changed to " + mac);
+        selectedRemotePC = pcManager.FindPC(new MACAddress(mac));
         pcManager.SetSelectedPC(selectedRemotePC);
         UpdateUIFromModel(selectedRemotePC);
     }
@@ -299,6 +334,11 @@ public class MainActivity extends ActionBarActivity
             txtMACValue = (TextView) view;
         }
 
+        TextView txtIPValue = null;
+        if ((view = findViewById(R.id.txtIPValue)) != null) {
+            txtIPValue = (TextView) view;
+        }
+
         Button btnWakeUp = null;
         if ((view = findViewById(R.id.btnWakeUp)) != null) {
             btnWakeUp = (Button) view;
@@ -317,6 +357,14 @@ public class MainActivity extends ActionBarActivity
                     txtMACValue.setText(getResources().getString(R.string.notavailable));
                 }
             }
+            if (txtIPValue != null) {
+                if (remotePC.GetAddressStr() != null) {
+                    txtIPValue.setText(remotePC.GetAddressStr());
+                } else {
+                    txtIPValue.setText(getResources().getString(R.string.notavailable));
+                }
+            }
+
 
             if (remotePC.GetStatus() == PC.Status.ON) {
                 if (txtStatusValue != null) {
@@ -424,35 +472,60 @@ public class MainActivity extends ActionBarActivity
         }
     }
 
-    private void InitializeUI() {
-        // Update PC values
-        Spinner pcSpinner = (Spinner) findViewById(R.id.spnPCSelector);
-        if (pcSpinner != null) {
-            pcSpinner.setOnItemSelectedListener(this);
-            Vector<PC> remotePCs = pcManager.GetRemotePCs();
-            Iterator<PC> it = remotePCs.iterator();
-            while (it.hasNext()) {
-                PC remotePC = (PC) it.next();
-                PCAdded(remotePC);
+    private void ReloadPCList() {
+        // Update PC list
+        final MainActivity main = this;
+        Runnable addAction = new Runnable() {
+            public void run() {
+                Spinner spinner = (Spinner) findViewById(R.id.spnPCSelector);
+                if (spinner == null) {
+                    LOG.error("PCAdded spinner is null!");
+                    return;
+                }
+
+                if (pcManager == null) {
+                    LOG.error("PCAdded pcManager is null!");
+                    return;
+                }
+
+                List<String> list = new ArrayList<String>();
+                Vector<PC> remotePCs = pcManager.GetRemotePCs();
+                Iterator<PC> it = remotePCs.iterator();
+                while (it.hasNext()) {
+                    PC entry = (PC) it.next();
+                    //list.add(entry.GetAddress().getHostAddress());
+                    list.add(entry.GetMACAddress().toString());
+                }
+                ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
+                        android.R.layout.simple_spinner_item, list);
+                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinner.setAdapter(dataAdapter);
+
+                // Need to update the values here since, the onItemSelected
+                // method will be called with a delay and flicker occurs
+                if (selectedRemotePC == null && !remotePCs.isEmpty()) {
+                    selectedRemotePC = remotePCs.elementAt(0);
+                    UpdateUIFromModel(selectedRemotePC);
+                }
+
+                if (remotePCs.isEmpty())
+                    UpdateLayouts(Layouts.Layout_EmptyModel);
+                else
+                    UpdateLayouts(Layouts.Layout_Normal);
             }
+        };
+        if (IsUIThread()) {
+            addAction.run();
         } else {
-            LOG.warn("InitializeUI spinner is NULL!");
+            MainActivity.this.runOnUiThread(addAction);
         }
-        UpdateLayouts();
     }
 
-    public void UpdateLayouts() {
+    public void UpdateLayouts(Layouts layout) {
         View view = null;
         RelativeLayout topLayout = null;
         if ((view = findViewById(R.id.topLayout)) != null) {
             topLayout = (RelativeLayout) view;
-        }
-
-        if (topLayout != null) {
-            if (isWifiConnectionAvailable)
-                topLayout.setVisibility(View.VISIBLE);
-            else
-                topLayout.setVisibility(View.GONE);
         }
 
         RelativeLayout middleLayout = null;
@@ -460,18 +533,58 @@ public class MainActivity extends ActionBarActivity
             middleLayout = (RelativeLayout) view;
         }
 
-        if (middleLayout != null) {
-            if (isWifiConnectionAvailable)
-                middleLayout.setVisibility(View.VISIBLE);
-            else
-                middleLayout.setVisibility(View.GONE);
-        }
-
         RelativeLayout noWifiLayout = null;
         if ((view = findViewById(R.id.noWifiLayout)) != null) {
             noWifiLayout = (RelativeLayout) view;
         }
 
+        RelativeLayout emptyModelLayout = null;
+        if ((view = findViewById(R.id.emptyModelLayout)) != null) {
+            emptyModelLayout = (RelativeLayout) view;
+        }
+
+        switch (layout) {
+            case Layout_NoWifi:
+                if (topLayout != null)
+                    topLayout.setVisibility(View.GONE);
+                if (middleLayout != null)
+                    middleLayout.setVisibility(View.GONE);
+                if (emptyModelLayout != null)
+                    emptyModelLayout.setVisibility(View.GONE);
+                if (noWifiLayout != null)
+                    noWifiLayout.setVisibility(View.VISIBLE);
+                break;
+            case Layout_Loading:
+                if (topLayout != null)
+                    topLayout.setVisibility(View.GONE);
+                if (middleLayout != null)
+                    middleLayout.setVisibility(View.GONE);
+                if (emptyModelLayout != null)
+                    emptyModelLayout.setVisibility(View.GONE);
+                if (noWifiLayout != null)
+                    noWifiLayout.setVisibility(View.GONE);
+                break;
+            case Layout_Normal:
+                if (topLayout != null)
+                    topLayout.setVisibility(View.VISIBLE);
+                if (middleLayout != null)
+                    middleLayout.setVisibility(View.VISIBLE);
+                if (emptyModelLayout != null)
+                    emptyModelLayout.setVisibility(View.GONE);
+                if (noWifiLayout != null)
+                    noWifiLayout.setVisibility(View.GONE);
+                break;
+            case Layout_EmptyModel:
+                if (topLayout != null)
+                    topLayout.setVisibility(View.GONE);
+                if (middleLayout != null)
+                    middleLayout.setVisibility(View.GONE);
+                if (emptyModelLayout != null)
+                    emptyModelLayout.setVisibility(View.VISIBLE);
+                if (noWifiLayout != null)
+                    noWifiLayout.setVisibility(View.GONE);
+                break;
+        }
         if (noWifiLayout != null) {
             if (isWifiConnectionAvailable)
                 noWifiLayout.setVisibility(View.GONE);
@@ -496,6 +609,11 @@ public class MainActivity extends ActionBarActivity
             if (pcManager == null) {
                 pcManager = new PCManager(networkingUtils, this, getApplicationContext());
                 pcManagerThread = new Thread(pcManager);
+
+                ReloadPCList();
+
+                // start will send start discovery and send update,
+                // so PC spinner needs to be populated
                 pcManagerThread.start();
             }
         } catch (Exception e) {
@@ -509,8 +627,10 @@ public class MainActivity extends ActionBarActivity
         if (pcManager != null)
             pcManager.terminate();
         try {
-            if (pcManagerThread != null)
+            if (pcManagerThread != null) {
                 pcManagerThread.join();
+                //TODO why not destroy pcManager?
+            }
         } catch (InterruptedException ex) {
             LOG.info("Failed to stop pc manager thread");
         }
@@ -520,14 +640,23 @@ public class MainActivity extends ActionBarActivity
     public void OnWifiConnected() {
         LOG.debug("Connected to Wifi");
         isWifiConnectionAvailable = true;
-        UpdateLayouts();
+        ReloadPCList();
         StartFunctionality();
+        if (pcManager.GetRemotePCs().isEmpty()) {
+            UpdateLayouts(Layouts.Layout_EmptyModel);
+        } else {
+            UpdateLayouts(Layouts.Layout_Normal);
+        }
     }
 
     public void OnWifiDisconnected() {
         LOG.debug("Disconnected from Wifi");
         isWifiConnectionAvailable = false;
-        UpdateLayouts();
         StopFunctionality();
+        UpdateLayouts(Layouts.Layout_NoWifi);
+    }
+
+    private boolean IsUIThread() {
+        return Looper.getMainLooper().getThread() == Thread.currentThread();
     }
 }
