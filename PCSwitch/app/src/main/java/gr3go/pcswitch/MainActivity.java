@@ -272,7 +272,8 @@ public class MainActivity extends ActionBarActivity
                 while (it.hasNext()) {
                     PC entry = (PC) it.next();
                     //list.add(entry.GetAddress().getHostAddress());
-                    list.add(entry.GetMACAddress().toString());
+                    //list.add(entry.GetMACAddress().toString());
+                    list.add(entry.GetName());
                 }
                 ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
                         android.R.layout.simple_spinner_item, list);
@@ -292,11 +293,63 @@ public class MainActivity extends ActionBarActivity
         }
     }
 
+    private void ReloadPCList() {
+        // Update PC list
+        final MainActivity main = this;
+        Runnable addAction = new Runnable() {
+            public void run() {
+                Spinner spinner = (Spinner) findViewById(R.id.spnPCSelector);
+                if (spinner == null) {
+                    LOG.error("PCAdded spinner is null!");
+                    return;
+                }
+
+                if (pcManager == null) {
+                    LOG.error("PCAdded pcManager is null!");
+                    return;
+                }
+
+                List<String> list = new ArrayList<String>();
+                Vector<PC> remotePCs = pcManager.GetRemotePCs();
+                Iterator<PC> it = remotePCs.iterator();
+                while (it.hasNext()) {
+                    PC entry = (PC) it.next();
+                    //list.add(entry.GetAddress().getHostAddress());
+                    //list.add(entry.GetMACAddress().toString());
+                    list.add(entry.GetName());
+                }
+                ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
+                        android.R.layout.simple_spinner_item, list);
+                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinner.setAdapter(dataAdapter);
+
+                // Need to update the values here since, the onItemSelected
+                // method will be called with a delay and flicker occurs
+                if (selectedRemotePC == null && !remotePCs.isEmpty()) {
+                    selectedRemotePC = remotePCs.elementAt(0);
+                    UpdateUIFromModel(selectedRemotePC);
+                }
+
+                if (remotePCs.isEmpty())
+                    UpdateLayouts(Layouts.Layout_EmptyModel);
+                else
+                    UpdateLayouts(Layouts.Layout_Normal);
+            }
+        };
+        if (IsUIThread()) {
+            addAction.run();
+        } else {
+            MainActivity.this.runOnUiThread(addAction);
+        }
+    }
+
     @Override
     public void onItemSelected(AdapterView<?> parent, View arg1, int pos, long id) {
-        String mac = parent.getItemAtPosition(pos).toString();
-        LOG.debug("Selection changed to " + mac);
-        selectedRemotePC = pcManager.FindPC(new MACAddress(mac));
+        String name = parent.getItemAtPosition(pos).toString();
+        //Suppose we are not sorting the DataSource
+        //selectedRemotePC = pcManager.FindPC(new MACAddress(mac));
+        selectedRemotePC = pcManager.GetRemotePCs().elementAt(pos);
+        LOG.debug("Selection changed to " + selectedRemotePC.GetName());
         pcManager.SetSelectedPC(selectedRemotePC);
         UpdateUIFromModel(selectedRemotePC);
     }
@@ -469,55 +522,6 @@ public class MainActivity extends ActionBarActivity
                 txtShutdownDelayValue.setText(getResources().getString(R.string.notavailable));
                 setTextViewClickable(txtShutdownDelayValue, false);
             }
-        }
-    }
-
-    private void ReloadPCList() {
-        // Update PC list
-        final MainActivity main = this;
-        Runnable addAction = new Runnable() {
-            public void run() {
-                Spinner spinner = (Spinner) findViewById(R.id.spnPCSelector);
-                if (spinner == null) {
-                    LOG.error("PCAdded spinner is null!");
-                    return;
-                }
-
-                if (pcManager == null) {
-                    LOG.error("PCAdded pcManager is null!");
-                    return;
-                }
-
-                List<String> list = new ArrayList<String>();
-                Vector<PC> remotePCs = pcManager.GetRemotePCs();
-                Iterator<PC> it = remotePCs.iterator();
-                while (it.hasNext()) {
-                    PC entry = (PC) it.next();
-                    //list.add(entry.GetAddress().getHostAddress());
-                    list.add(entry.GetMACAddress().toString());
-                }
-                ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(main,
-                        android.R.layout.simple_spinner_item, list);
-                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinner.setAdapter(dataAdapter);
-
-                // Need to update the values here since, the onItemSelected
-                // method will be called with a delay and flicker occurs
-                if (selectedRemotePC == null && !remotePCs.isEmpty()) {
-                    selectedRemotePC = remotePCs.elementAt(0);
-                    UpdateUIFromModel(selectedRemotePC);
-                }
-
-                if (remotePCs.isEmpty())
-                    UpdateLayouts(Layouts.Layout_EmptyModel);
-                else
-                    UpdateLayouts(Layouts.Layout_Normal);
-            }
-        };
-        if (IsUIThread()) {
-            addAction.run();
-        } else {
-            MainActivity.this.runOnUiThread(addAction);
         }
     }
 

@@ -42,9 +42,12 @@ public class Client {
 	
 	public String toString()
 	{
-		String result = "Client[";
+		String result = "Client[addr=";
 		if(addr != null)
-			result += addr.getHostName();
+			//getHostName is slow
+			//No reason to slow down server only for logging
+			//result += addr.getHostName();
+			result += addr.toString();
 		else
 			result += "Unknown";
 		result += "]";

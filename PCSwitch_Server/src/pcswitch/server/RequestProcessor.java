@@ -30,6 +30,7 @@ public class RequestProcessor extends CommandVisitor{
 		getServerStatusRsp.SetPeer(getServerStatusReq.GetPeer());
 		getServerStatusRsp.SetPeerPort(getServerStatusReq.GetPeerPort());
 		getServerStatusRsp.SetMAC(Utils.GetMAC());
+		getServerStatusRsp.SetName(Utils.GetName());
 		getServerStatusRsp.SetShutdownIn(server.GetShutdownDelay());
 		if(server.shutingdown)
 			getServerStatusRsp.SetStatus(GetServerStatusRsp.Status.ShutingDown.ordinal());
