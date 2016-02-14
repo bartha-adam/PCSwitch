@@ -197,6 +197,7 @@ public class Server extends Thread implements CommandSender{
 		getServerStatusRsp.SetPeer(peer);
 		getServerStatusRsp.SetPeerPort(peerPort);
 		getServerStatusRsp.SetMAC(Utils.GetMAC());
+		getServerStatusRsp.SetName(Utils.GetName());
 		getServerStatusRsp.SetShutdownIn(GetShutdownDelay());
 		if(shutingdown) {
 			getServerStatusRsp.SetStatus(GetServerStatusRsp.Status.ShutingDown.ordinal());

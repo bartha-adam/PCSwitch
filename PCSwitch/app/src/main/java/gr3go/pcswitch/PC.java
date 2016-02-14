@@ -18,6 +18,7 @@ public class PC {
     protected Date lastCommunication;
     protected int shutdownDelay;
     protected MACAddress macAddress = null;
+    protected String name = null;
     protected long dbId;
 
     public PC(MACAddress address) {
@@ -44,6 +45,13 @@ public class PC {
         } else {
             result += macAddress.toString();
         }
+        result += " Name=";
+        if (name == null) {
+            result += "N/A";
+        } else {
+            result += name;
+        }
+
         result += " DbId=" + dbId;
         result += " Status=";
         if (status == Status.ON) {
@@ -97,6 +105,16 @@ public class PC {
         this.status = status;
         return true;
     }
+
+    public boolean SetName(String name) {
+        if (this.name == name) {
+            return false;
+        }
+        this.name = name;
+        return true;
+    }
+
+    public String GetName() { return name; }
 
     public boolean SetShutdownDelay(int shutdownDelay) {
         if (this.shutdownDelay == shutdownDelay) {

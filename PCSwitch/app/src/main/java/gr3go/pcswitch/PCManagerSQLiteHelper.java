@@ -12,17 +12,19 @@ public class PCManagerSQLiteHelper extends SQLiteOpenHelper {
 	Logger LOG = LoggerFactory.getLogger(PCManagerSQLiteHelper.class);
 	
 	private static final String DATABASE_NAME = "persistency.db";
-	private static final int DATABASE_VERSION = 2;
+	private static final int DATABASE_VERSION = 3;
 	
 	public static final String TABLE_REMOTEPCS = "remotepcs";
 	public static final String COLUMN_ID = "id";
 	public static final String COLUMN_ADDRESS = "address";
 	public static final String COLUMN_MAC = "mac";
+    public static final String COLUMN_NAME = "name";
 	
 	private static final String DATABASE_CREATE = "create table "
 		      + TABLE_REMOTEPCS + "(" + COLUMN_ID  + " integer primary key autoincrement, "
-			  + COLUMN_ADDRESS + " text not null, "
-		      + COLUMN_MAC + " text not null);";
+			  + COLUMN_ADDRESS + " text not null,"
+		      + COLUMN_MAC + " text not null,"
+              + COLUMN_NAME + " text not null);";
 	
 	public PCManagerSQLiteHelper(Context context) {
 	    super(context, DATABASE_NAME, null, DATABASE_VERSION);

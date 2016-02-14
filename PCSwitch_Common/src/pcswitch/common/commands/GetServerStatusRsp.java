@@ -18,6 +18,7 @@ public class GetServerStatusRsp extends CommandBase {
 	MACAddress macAddress;
 	int shutdownDelay; //seconds; negative -> not set
 	int status;
+	String name;
 	
 	public GetServerStatusRsp() {
 		super(CommandID_GetStatus_Rsp);
@@ -39,6 +40,12 @@ public class GetServerStatusRsp extends CommandBase {
 		input.read(macAddress.bytes, 0, MACAddress.MAC_SIZE);
 		shutdownDelay = input.readInt();
 		status = input.readInt();
+		int nameSize = input.readInt();
+		name = "";
+		for(int i = 0; i < nameSize; ++i) {
+			name += input.readChar();
+		}
+		
 	}
 
 	@Override
@@ -53,6 +60,8 @@ public class GetServerStatusRsp extends CommandBase {
 		}
 		output.writeInt(shutdownDelay);
 		output.writeInt(status);
+		output.writeInt(name.length());
+		output.writeChars(name);
 	}
 	
 	public void SetMAC(MACAddress MAC){
@@ -79,11 +88,20 @@ public class GetServerStatusRsp extends CommandBase {
 		return this.status;
 	}
 	
+	public void SetName(String name){
+		this.name = name;
+	}
+	
+	public String GetName(){
+		return this.name;
+	}
+	
 	public String toString()
 	{
 		String result = "GetServerStatusRsp[";
 		result += super.toString();
 		result += " MAC=" + macAddress.toString();
+		result += " Name=" + name;
 		result += " ShutdownDelay=";
 		if(shutdownDelay > 0)
 			result += shutdownDelay + "s";

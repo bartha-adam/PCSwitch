@@ -273,6 +273,7 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
             remotePC.MarkLastCommunication();
             changed |= remotePC.SetShutdownDelay(getServerStatusRsp.GetShutdownIn());
             changed |= remotePC.SetAddress(getServerStatusRsp.GetPeer());
+            changed |= remotePC.SetName(getServerStatusRsp.GetName());
             if (newInstance) {
                 LOG.info("Added " + remotePC.toString());
                 NotifyPCAdded(remotePC, true);
