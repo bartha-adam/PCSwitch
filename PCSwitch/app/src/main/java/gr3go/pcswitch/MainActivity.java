@@ -612,9 +612,11 @@ public class MainActivity extends ActionBarActivity
         try {
             if (pcManager == null) {
                 pcManager = new PCManager(networkingUtils, this, getApplicationContext());
-                pcManagerThread = new Thread(pcManager);
+            }
 
-                ReloadPCList();
+            ReloadPCList();
+            if (pcManagerThread == null) {
+                pcManagerThread = new Thread(pcManager);
 
                 // start will send start discovery and send update,
                 // so PC spinner needs to be populated
@@ -633,6 +635,7 @@ public class MainActivity extends ActionBarActivity
         try {
             if (pcManagerThread != null) {
                 pcManagerThread.join();
+                pcManagerThread = null;
                 //TODO why not destroy pcManager?
             }
         } catch (InterruptedException ex) {

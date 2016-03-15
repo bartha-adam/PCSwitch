@@ -89,7 +89,7 @@ public class CommLink extends Thread {
         packetQueue = new ConcurrentLinkedQueue<>();
 		start();
 	}
-	
+
 	public void sendCommand(CommandBase command, InetAddress peerAddress, int peerPort)
             throws IOException {
 		try {
@@ -129,6 +129,7 @@ public class CommLink extends Thread {
 	public void run() {
 		byte[] received_message = new byte[MAX_INCOMING_MSG_LEN];
 		DatagramPacket received_packet = new DatagramPacket(received_message, received_message.length);
+        bKeepRunning = true;
         try {
             while(bKeepRunning) {
                 if(packetSendMode == PacketSendAsyncMode.UsingReceiveThread && !packetQueue.isEmpty()) {
@@ -166,6 +167,9 @@ public class CommLink extends Thread {
         bKeepRunning = false;
         if(socket != null) {
             socket.close();
+            socket = null;
         }
+        //Drop all pending requests
+        packetQueue.clear();
     }
 }
