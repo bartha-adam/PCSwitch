@@ -42,6 +42,7 @@ public class PCManagerDataSource {
             return false;
         }
         values.put(PCManagerSQLiteHelper.COLUMN_MAC, macAddress.toString());
+        values.put(PCManagerSQLiteHelper.COLUMN_NAME, pc.GetName());
         long insertId = database.insert(PCManagerSQLiteHelper.TABLE_REMOTEPCS, null, values);
         pc.SetDBId(insertId);
         LOG.info("Added new " + pc.toString());

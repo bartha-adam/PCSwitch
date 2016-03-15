@@ -20,7 +20,7 @@ import pcswitch.common.commands.*;
 public class PCManager extends CommandVisitor implements CommLinkListener, Runnable {
     Logger LOG = LoggerFactory.getLogger(PCManager.class);
     NetworkingUtils networkingUtils;
-    CommLink commLink;
+    private CommLink commLink;
     int remotePort = 12002;
     int localPort = 12001;
 
@@ -44,17 +44,10 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
         this.networkingUtils = networkingUtils;
         this.listener = listener;
         this.context = context;
-        LOG.info("Constructor localPort=" + localPort);
-        try {
-            commLink = new CommLink(localPort, this);
-            dataSource = new PCManagerDataSource(context);
-            dataSource.open();
-            remotePCs = dataSource.GetPCs();
-        } catch (SocketException e) {
-            LOG.info("Constructor exception:" + e.toString());
-            e.printStackTrace();
-            throw e;
-        }
+
+        dataSource = new PCManagerDataSource(context);
+        dataSource.open();
+        remotePCs = dataSource.GetPCs();
     }
 
     public void SetSelectedPC(PC pc) {
@@ -96,6 +89,9 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
     }
 
     public boolean SendGetServerStatus_Broadcast() {
+        if(EnsureCommLinkIsValid() == false) {
+            return false;
+        }
         int subnetId = networkingUtils.GetIPv4() & networkingUtils.GetNetMask();
         int broadcastAddress = subnetId | ~networkingUtils.GetNetMask();
 
@@ -311,18 +307,31 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
 
     @Override
     public void run() {
-        SendGetServerStatus_Broadcast();
+        running = true;
+        if(EnsureCommLinkIsValid() == false) {
+            return;
+        }
+        // There may be some packets lost after enabling WiFi, so send multiple discovery request
+        // to all.
+        int numInitialDiscoveryRequests = 15;
         while (running) {
             try {
                 Date now = new Date();
-                if (lastMonitoringSent == null || (now.getTime() - lastMonitoringSent.getTime()) > monitoringPeriod) {
-                    if (selectedPC != null) {
-                        SendGetServerStatus(selectedPC);
-                        lastMonitoringSent = now;
+                if (numInitialDiscoveryRequests > 0) {
+                    SendGetServerStatus_Broadcast();
+                    lastMonitoringSent = now;
+                    numInitialDiscoveryRequests--;
+                }
+                else {
+                    if (lastMonitoringSent == null || (now.getTime() - lastMonitoringSent.getTime()) > monitoringPeriod) {
+                        if (selectedPC != null) {
+                            SendGetServerStatus(selectedPC);
+                            lastMonitoringSent = now;
+                        }
                     }
                 }
                 if (remotePCs == null) {
-                    LOG.warn("remotePCs is null!!");
+                    LOG.warn("remotePCs is null!");
                 } else {
                     Iterator<PC> it = remotePCs.iterator();
                     while (it.hasNext()) {
@@ -351,6 +360,7 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
             try {
                 commLink.terminate();
                 commLink.join();
+                commLink = null;
             } catch (InterruptedException ex) {
                 LOG.info("Failed to stop commLink");
             }
@@ -375,5 +385,19 @@ public class PCManager extends CommandVisitor implements CommLinkListener, Runna
         } else {
             LOG.error("NotifyPCChanged listener is NULL!!");
         }
+    }
+
+    private boolean EnsureCommLinkIsValid() {
+        try {
+            if(commLink == null) {
+                commLink = new CommLink(localPort, this);
+                LOG.info("Create CommLink localPort=" + localPort);
+            }
+        } catch (SocketException e) {
+            LOG.warn("Failed to create CommLink");
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 }
