@@ -3,5 +3,5 @@ import pcswitch.common.commands.*;
 
 public interface CommandSender {
 
-	public void SendCommand(CommandBase command);
+	public void sendCommand(CommandBase command);
 }
