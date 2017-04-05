@@ -17,7 +17,7 @@
 			<arguments>
 				<dictionary>
 					<key>LaunchConfigHandle</key>
-					<value>&lt;project&gt;/.externalToolBuilders/make_jar.launch</value>
+					<value>&lt;project&gt;/.externalToolBuilders/MakeJar.launch</value>
 				</dictionary>
 			</arguments>
 		</buildCommand>
