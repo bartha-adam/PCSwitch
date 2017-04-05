@@ -8,40 +8,37 @@ public class Client {
 	
 	private InetAddress addr;
 	private int port;
-	private Date		lastCommunication;
-	private int 		keepAlivePeriod;//Seconds
+	private Date lastCommunication;
+	private int keepAlivePeriod; //Seconds
 	
 	
-	public Client(InetAddress remoteAddress, int port, int keepAlivePeriod)
-	{
+	public Client(InetAddress remoteAddress, int port, int keepAlivePeriod) {
 		addr = remoteAddress;
 		this.keepAlivePeriod = keepAlivePeriod;
 		this.port = port;
 		lastCommunication = new Date();
 	}
-	public void MarkCommunication()
-	{
+	
+	public void markCommunication() {
 		lastCommunication = new Date();
 	}
-	public boolean IsTimeouting()
-	{
+	
+	public boolean isTimeouting() {
 		Date now = new Date();
 		if(now.getTime() - lastCommunication.getTime() > 2 * keepAlivePeriod * 1000)
 			return true;
 		return false;
 	}
 	
-	public InetAddress GetAddress()
-	{
+	public InetAddress getAddress() {
 		return addr;
 	}
-	public int GetPort()
-	{
+	
+	public int GetPort() {
 		return port;
 	}
 	
-	public String toString()
-	{
+	public String toString() {
 		String result = "Client[addr=";
 		if(addr != null)
 			//getHostName is slow

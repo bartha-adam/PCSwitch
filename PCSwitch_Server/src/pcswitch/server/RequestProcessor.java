@@ -16,7 +16,7 @@ public class RequestProcessor extends CommandVisitor{
 		PingCommandRsp pingRsp = new PingCommandRsp(pingReq.GetTranscationID());
 		pingRsp.SetPeer(pingReq.GetPeer());
 		pingRsp.SetPeerPort(pingReq.GetPeerPort());
-		sender.SendCommand(pingRsp);
+		sender.sendCommand(pingRsp);
 	}
 
 	@Override
@@ -29,14 +29,14 @@ public class RequestProcessor extends CommandVisitor{
 		GetServerStatusRsp getServerStatusRsp = new GetServerStatusRsp(getServerStatusReq.GetTranscationID());
 		getServerStatusRsp.SetPeer(getServerStatusReq.GetPeer());
 		getServerStatusRsp.SetPeerPort(getServerStatusReq.GetPeerPort());
-		getServerStatusRsp.SetMAC(Utils.GetMAC());
-		getServerStatusRsp.SetName(Utils.GetName());
-		getServerStatusRsp.SetShutdownIn(server.GetShutdownDelay());
+		getServerStatusRsp.SetMAC(Utils.getMAC());
+		getServerStatusRsp.SetName(Utils.getMachineName());
+		getServerStatusRsp.SetShutdownIn(server.getShutdownDelay());
 		if(server.shutingdown)
 			getServerStatusRsp.SetStatus(GetServerStatusRsp.Status.ShutingDown.ordinal());
 		else
 			getServerStatusRsp.SetStatus(GetServerStatusRsp.Status.ON.ordinal());
-		sender.SendCommand(getServerStatusRsp);
+		sender.sendCommand(getServerStatusRsp);
 	}
 
 	@Override
@@ -50,9 +50,9 @@ public class RequestProcessor extends CommandVisitor{
 		SetShutdownDelayRsp setShutdownDelayRsp = new SetShutdownDelayRsp(setShutdownDelayReq.GetTranscationID());
 		setShutdownDelayRsp.SetPeer(setShutdownDelayReq.GetPeer());
 		setShutdownDelayRsp.SetPeerPort(setShutdownDelayReq.GetPeerPort());
-		server.SetShutdownDelay(setShutdownDelayReq.GetShutdownDelay());
+		server.setShutdownDelay(setShutdownDelayReq.GetShutdownDelay());
 		setShutdownDelayRsp.SetShutdownDelay(server.shutdownDelay);
-		sender.SendCommand(setShutdownDelayRsp);
+		sender.sendCommand(setShutdownDelayRsp);
 	}
 
 	@Override

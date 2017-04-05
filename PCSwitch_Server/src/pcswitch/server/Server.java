@@ -33,14 +33,14 @@ public class Server extends Thread implements CommandSender{
 			int port = Integer.parseInt(args[0]) ;
 			Server server = new Server();
 			server.start();
-			server.RunServer(port);
+			server.runServer(port);
 		 }
 		 catch( Exception e ) {
 		    System.out.println(e) ;
 		 }
 	}
 	
-	void RunServer(int port) {
+	void runServer(int port) {
 		try {
 			socket = new DatagramSocket( port ) ;
 			System.out.println( "The server is ready on port " + port ) ;
@@ -48,13 +48,13 @@ public class Server extends Thread implements CommandSender{
 				DatagramPacket packet = new DatagramPacket( new byte[MAX_PACKET_SIZE], MAX_PACKET_SIZE ) ;
 				socket.receive(packet) ;
 				System.out.println(packet.getAddress().getHostAddress() + ":" + packet.getPort() + ": " +
-					byteArrayToHex(packet.getData(), packet.getLength()) ) ;
+					Utils.byteArrayToHex(packet.getData(), packet.getLength()) ) ;
 			
 				CommandBase command = CommandBase.Unserialize(packet.getData(), packet.getLength());
 				if(command != null) {
 					command.SetPeer(packet.getAddress());
 					command.SetPeerPort(packet.getPort());
-					CommandReceived(command);
+					commandReceived(command);
 				} else {
 					System.out.println("Failed to parse command!");
 				}
@@ -64,12 +64,13 @@ public class Server extends Thread implements CommandSender{
 			System.out.println( e ) ;
 		}
 	}
-	void CommandReceived(CommandBase cmd) {
+	
+	void commandReceived(CommandBase cmd) {
 		System.out.println("Rcvd " + cmd.toString());
 		RequestProcessor requestProcessor = new RequestProcessor(this, this);
-		Client client = FindClinet(cmd.GetPeer());
+		Client client = findClinet(cmd.GetPeer());
 		if(client != null) {
-			client.MarkCommunication();
+			client.markCommunication();
 			System.out.println("Marking communication for " + client.toString());
 		} else {
 			Client newClient = new Client(cmd.GetPeer(), cmd.GetPeerPort(), clientPoolPeriod);
@@ -80,7 +81,7 @@ public class Server extends Thread implements CommandSender{
 	}
 	
 	@Override
-	public void SendCommand(CommandBase cmd) {
+	public void sendCommand(CommandBase cmd) {
 		System.out.println("Send " + cmd.toString());
 		try {
 			byte[] binaryCommand = cmd.Serialize();
@@ -100,11 +101,11 @@ public class Server extends Thread implements CommandSender{
 	@Override
 	public void run() {
 		// Notify all clients 
-		SendStatusBroadcast();
+		sendStatusBroadcast();
 		while(true) {
 			try {
 				Date now = new Date();
-				CheckClients();
+				checkClients();
 				if (shutdownTime != null) {
 					synchronized(shutdownDelay) {
 						long shutdownTimeMSec = shutdownTime.getTime();
@@ -113,21 +114,21 @@ public class Server extends Thread implements CommandSender{
 							shutdownDelay = (int)((shutdownTimeMSec - nowMSec)/1000);
 							System.out.println("ShutdownDelay updated to " + shutdownDelay);
 							if(shutdownDelay <=60)
-								SendStatusToClients();
+								sendStatusToClients();
 						}
 						else {
-							if(TryShutdown()){
+							if(tryShutdown()){
 								shutdownDelay = -1;//Deactivate delayed shutdown
 								shutingdown = true;
 								shutdownTime = null;
-								SendStatusToClients();
+								sendStatusToClients();
 							}
 						}
 					}
 				}
 				if(lastStatusReport == null || 
 					now.getTime() - lastStatusReport.getTime() >= statusPublishPeriod) {
-					SendStatusToClients();
+					sendStatusToClients();
 				}
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -138,12 +139,18 @@ public class Server extends Thread implements CommandSender{
 		}
 	}
 	
-	protected boolean TryShutdown(){
+	protected boolean tryShutdown(){
 		boolean result = false;
 		try {
-			//TODO: change this if not running on Windows
-			Runtime.getRuntime().exec("shutdown /s /f");
-			result = true;
+			if(Utils.isWindows()) {
+				Runtime.getRuntime().exec("shutdown /s /f");
+				result = true;
+			} else if (Utils.isLinux()) {
+				Runtime.getRuntime().exec("shutdown -h now");
+				result = true;
+			} else {
+				System.out.println("Failed to shut down, unknown OS");
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.out.println("Failed to shutdown: " + e.toString());
@@ -151,15 +158,7 @@ public class Server extends Thread implements CommandSender{
 		return result;
 	}
 	
-	//TODO: move this method to utils?
-	static String byteArrayToHex(byte[] a, int size) {
-	   StringBuilder sb = new StringBuilder();
-	   for (int i=0; i<size; i++) {
-	      sb.append(String.format("%02x", a[i]&0xff));
-	   }
-	   return sb.toString();
-	}
-	public void SetShutdownDelay(int delayInSec) {
+	public void setShutdownDelay(int delayInSec) {
 	   synchronized (shutdownDelay) {
 		   if(delayInSec < 0) {
 			   shutdownTime = null;
@@ -169,22 +168,22 @@ public class Server extends Thread implements CommandSender{
 			   shutdownTime = new Date();
 			   shutdownTime.setTime(shutdownTime.getTime() + delayInSec * 1000);
 		   }
-		   SendStatusToClients();
+		   sendStatusToClients();
 	   }
 	}
 	
-	Client FindClinet(InetAddress address) {
+	Client findClinet(InetAddress address) {
 		for(Client c : clientList) {
-			if(c.GetAddress().equals(address))
+			if(c.getAddress().equals(address))
 				return c; 
 		}
 		return null;
 	}
 	
-	void CheckClients() {
+	void checkClients() {
 		for (Iterator<Client> iterator = clientList.iterator(); iterator.hasNext();) {
 		    Client c = iterator.next();
-		    if (c.IsTimeouting()) {
+		    if (c.isTimeouting()) {
 		        // Remove the current element from the iterator and the list.
 		    	System.out.println("Removing " + c.toString());
 		        iterator.remove();
@@ -192,13 +191,13 @@ public class Server extends Thread implements CommandSender{
 		}
 	}
 	
-	GetServerStatusRsp CreateStatusResponse(InetAddress peer, int peerPort) {
+	GetServerStatusRsp createStatusResponse(InetAddress peer, int peerPort) {
 		GetServerStatusRsp getServerStatusRsp = new GetServerStatusRsp();
 		getServerStatusRsp.SetPeer(peer);
 		getServerStatusRsp.SetPeerPort(peerPort);
-		getServerStatusRsp.SetMAC(Utils.GetMAC());
-		getServerStatusRsp.SetName(Utils.GetName());
-		getServerStatusRsp.SetShutdownIn(GetShutdownDelay());
+		getServerStatusRsp.SetMAC(Utils.getMAC());
+		getServerStatusRsp.SetName(Utils.getMachineName());
+		getServerStatusRsp.SetShutdownIn(getShutdownDelay());
 		if(shutingdown) {
 			getServerStatusRsp.SetStatus(GetServerStatusRsp.Status.ShutingDown.ordinal());
 		} else {
@@ -207,7 +206,7 @@ public class Server extends Thread implements CommandSender{
 		return getServerStatusRsp;
 	}
 	
-	void SendStatusBroadcast() {
+	void sendStatusBroadcast() {
 		Enumeration<NetworkInterface> interfaces = null;
 		try {
 			interfaces = NetworkInterface.getNetworkInterfaces();
@@ -223,8 +222,8 @@ public class Server extends Thread implements CommandSender{
 						continue;
 					
 					// Use this address
-					GetServerStatusRsp getServerStatusRsp = CreateStatusResponse(broadcast, DefaultClientPort);
-					SendCommand(getServerStatusRsp);
+					GetServerStatusRsp getServerStatusRsp = createStatusResponse(broadcast, DefaultClientPort);
+					sendCommand(getServerStatusRsp);
 				}
 			}
 		} catch (SocketException e1) {
@@ -233,16 +232,16 @@ public class Server extends Thread implements CommandSender{
 		}
 	}
 	
-	void SendStatusToClients() {
+	void sendStatusToClients() {
 		lastStatusReport = new Date();
 		for(Client c : clientList) {
-		    GetServerStatusRsp getServerStatusRsp = CreateStatusResponse(c.GetAddress(), c.GetPort());
-			SendCommand(getServerStatusRsp);
+		    GetServerStatusRsp getServerStatusRsp = createStatusResponse(c.getAddress(), c.GetPort());
+			sendCommand(getServerStatusRsp);
 		}
 	}
 	
    
-   public int GetShutdownDelay(){
+   public int getShutdownDelay(){
 	   synchronized (shutdownDelay) {
 		   return shutdownDelay;
 	   }
